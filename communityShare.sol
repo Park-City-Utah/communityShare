@@ -19,6 +19,11 @@ contract Item {
         _;                                             //executes check BEFORE func in this case
     }
     
+    modifier renterFunc {
+        require(renter == msg.sender);                  //Better than throw - deprecated to 'require'
+        _;                                             //executes check BEFORE func in this case
+    }
+    
     function Item (string nameIn, string descIn, uint valueIn) public {
         owner = msg.sender;
         name = nameIn;
@@ -34,6 +39,16 @@ contract Item {
             address(owner).send(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
         } else { return; }
     }
+    
+    //Only owner can verify the Item has been returned - remaining balance will be paid back to renter
+    function returnItem() public ownerFunc {
+        if(this.balance > 0) { address(renter).send(this.balance); }
+    }
+    
+    //If balance has been paid out to owner, renter can claiim ownership of Item
+//    function claimItem() public renterFunc {
+//        if(this.balance < 1) { owner = renter; }            //Renter now becomes the owner
+//    }
     
     //Only owner can set value for Item    
     function setName(string newName) ownerFunc {
@@ -76,9 +91,17 @@ contract Item {
         renter = renterAddrIn;
     }
     
-    function getRenterAddr() returns (address) {
+    function getRenter() returns (address) {
         return renter;
-    }    
+    }  
+    
+    function getOwner() returns (address) {
+        return owner;
+    }
+    
+    function getBalance() returns (uint) {
+        return this.balance;
+    }   
     
     //Kill instance of contract or kill contract on blockchain?
     function kill() ownerFunc {
