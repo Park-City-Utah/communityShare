@@ -27,10 +27,12 @@ contract Item {
         value = valueIn;
     }
     
-    //Rent object requires a payment to the Item, part goes to owner as rent while the rest remains in contract
-    function rent() public payable nonOwnerFunc{   
-        renter = msg.sender;                            //renter will be set to sender of funds
-        address(owner).send(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
+    //Rent requires a payment to the Item, part goes to owner as rent while the rest remains in contract
+    function rent() public payable nonOwnerFunc {   
+        if(msg.value >= value) {
+            renter = msg.sender;                            //renter will be set to sender of funds
+            address(owner).send(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
+        } else { return; }
     }
     
     //Only owner can set value for Item    
