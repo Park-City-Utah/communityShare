@@ -2,26 +2,27 @@ pragma solidity ^0.4.0;
 
 contract Item {
     address private owner;
+    address private leasee;
     string private name;
     string private desc;
     uint private age;
     uint private value;
-    address private renter;
+    bool private available;
     
     //Access modification - Func based on owner
     modifier ownerFunc {
-        require(owner == msg.sender);                 //Better than throw - deprecated to 'require'
-        _;                                            //executes check BEFORE func in this case
+        require(owner == msg.sender);                //Better than throw - deprecated to 'require'
+        _;                                           //executes check BEFORE func in this case
     }
     
         modifier nonOwnerFunc {
-        require(owner != msg.sender);                  //Better than throw - deprecated to 'require'
-        _;                                             //executes check BEFORE func in this case
+        require(owner != msg.sender);                //Better than throw - deprecated to 'require'
+        _;                                           //executes check BEFORE func in this case
     }
     
-    modifier renterFunc {
-        require(renter == msg.sender);                  //Better than throw - deprecated to 'require'
-        _;                                             //executes check BEFORE func in this case
+    modifier leaseeFunc {
+        require(leasee == msg.sender);              //Better than throw - deprecated to 'require'
+        _;                                          //executes check BEFORE func in this case
     }
     
     function Item (string nameIn, string descIn, uint valueIn) public {
@@ -30,23 +31,28 @@ contract Item {
         desc = descIn;
         age = 1;
         value = valueIn;
+        available = true;
     }
     
-    //Rent requires a payment to the Item, part goes to owner as rent while the rest remains in contract
-    function rent() public payable nonOwnerFunc {   
+    //Lease requires a payment to the Item/contrat address, part goes to owner as rent while the rest remains in contract
+    function lease() public payable nonOwnerFunc {   
+        require(available == true);                         //Item must be available to be leased
         if(msg.value >= value) {
-            renter = msg.sender;                            //renter will be set to sender of funds
+            leasee = msg.sender;                            //leasee will be set to sender of funds
             address(owner).send(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
+            available = false;
         } else { return; }
     }
     
-    //Only owner can verify the Item has been returned - remaining balance will be paid back to renter
+    //Only owner can verify the Item has been returned - remaining balance will be paid back to leasee
     function returnItem() public ownerFunc {
-        if(this.balance > 0) { address(renter).send(this.balance); }
+        if(this.balance > 0) { address(leasee).send(this.balance); }
+        leasee = 0;                                         //Clear leasee address - no longer leasee
+        available = true;
     }
     
     //If balance has been paid out to owner, renter can claiim ownership of Item
-//    function claimItem() public renterFunc {
+//    function claimItem() public leaseeFunc {
 //        if(this.balance < 1) { owner = renter; }            //Renter now becomes the owner
 //    }
     
@@ -87,13 +93,22 @@ contract Item {
     }
     
     //Only owner can set value for Item
-    function setRenter(address renterAddrIn) ownerFunc {
-        renter = renterAddrIn;
+    function setLeasee(address leaseeAddrIn) ownerFunc {
+        leasee = leaseeAddrIn;
     }
     
-    function getRenter() returns (address) {
-        return renter;
+    function getLeasee() returns (address) {
+        return leasee;
     }  
+    
+    //Only owner can set value for Item
+    function setAvailability(bool availabilityIn) ownerFunc {
+        available = availabilityIn;
+    }
+    
+    function getAvailability() returns (bool) {
+        return available;
+    }
     
     function getOwner() returns (address) {
         return owner;
