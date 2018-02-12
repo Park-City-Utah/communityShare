@@ -9,6 +9,7 @@ contract Item {
     uint private leased;       
     uint private value;
     bool private available;
+    uint private balance;
     
     //Access modification - Func based on owner
     modifier ownerFunc {
@@ -34,11 +35,13 @@ contract Item {
         created = block.timestamp;
         value = value_;
         available = true;
+        balance = getBalance();
     }
     
     //Lease requires a payment to the Item/contract address, part goes to owner as rent while the rest remains in contract
     function lease() public payable nonOwnerFunc {   
         require(available == true);                         //Item must be available to be leased
+        require(msg.value >= value);
         if(msg.value >= value) {
             leasee = msg.sender;                            //leasee will be set to sender of funds
             address(owner).send(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
@@ -60,11 +63,12 @@ contract Item {
     function payOut() public leaseeFunc  {
         require(available == false);
         address(owner).send(getBalance());                  //Send funds to owner from Item wallet
-        claimItem;
+        //claimItem;
     }
     
     //If balance has been paid out to owner, renter can claim ownership of Item
     function claimItem() public leaseeFunc {
+        require(this.balance == 0);
         if(this.balance == 0) { owner = leasee; }            //Renter now becomes the owner
     }
 
