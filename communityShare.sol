@@ -28,7 +28,7 @@ contract Item {
     }
     
     //Constructor
-    function Item (string name_, string desc_, uint value_) public {
+    constructor (string name_, string desc_, uint value_) public {
         owner = msg.sender;
         name = name_;
         desc = desc_;
@@ -40,11 +40,10 @@ contract Item {
     
     //Lease requires a payment to the Item/contract address, part goes to owner as rent while the rest remains in contract
     function lease() public payable nonOwnerFunc {   
-        require(available == true);                         //Item must be available to be leased
-        require(msg.value >= value);
+        require(available && msg.value >= value);       //Item must be available to be leased
         if(msg.value >= value) {
-            leasee = msg.sender;                            //leasee will be set to sender of funds
-            address(owner).send(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
+            leasee = msg.sender;                                //leasee will be set to sender of funds
+            address(owner).transfer(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
             available = false;
             leased = block.timestamp;
         } else { return; }
@@ -53,7 +52,9 @@ contract Item {
     //Only owner can verify the Item has been returned - remaining balance will be paid back to leasee
     function returnItem() public ownerFunc {
         require(available == false);                        //Can't return an un leased item
-        if(this.balance > 0) { address(leasee).send(this.balance); }
+        if(address(this).balance > 0) { 
+            leasee.transfer(getBalance()); 
+        }
         leasee = 0;                                         //Clear leasee address - no longer leasee
         available = true;
         leased = 0;                                         //Reset leased timestamp
@@ -62,21 +63,22 @@ contract Item {
     //(Only) Leasee can pay towards balance - can trigger claim of ownership
     function payOut() public leaseeFunc  {
         require(available == false);
-        address(owner).send(getBalance());                  //Send funds to owner from Item wallet
+        address(owner).transfer(getBalance());                  //Send funds to owner from Item wallet
         //claimItem;
     }
     
     //If balance has been paid out to owner, renter can claim ownership of Item
     function claimItem() public leaseeFunc {
-        require(this.balance == 0);
-        if(this.balance == 0) { owner = leasee; }            //Renter now becomes the owner
+        balance = getBalance();
+        require(balance == 0);
+        if(balance == 0) { owner = leasee; }            //Renter now becomes the owner
     }
 
 //Todo: transfer funds daily
 //Todo: check balance and call claimItem after event
     
     //Only owner can set value for Item    
-    function setName(string newName) ownerFunc {
+    function setName(string newName) public ownerFunc {
         name = newName;
     }
     
@@ -137,7 +139,7 @@ contract Item {
     
     //Get is public
     function getBalance() returns (uint) {
-        return this.balance;
+        return address(this).balance;
     }   
     
     //Kill instance of contract or kill contract on blockchain?
