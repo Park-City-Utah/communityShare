@@ -6,10 +6,11 @@ contract Item {
     string private name;
     string private desc;
     uint private created;
-    uint private leased;       
+    uint private leasedTime;       
     uint private value;
     bool private available;
     uint private balance;
+    //uint private timeSinceRentCollected;
     
     //Access modification - Func based on owner
     modifier ownerFunc {
@@ -17,7 +18,7 @@ contract Item {
         _;                                           //executes check BEFORE func in this case
     }
     
-        modifier nonOwnerFunc {
+    modifier nonOwnerFunc {
         require(owner != msg.sender);                //Better than throw - deprecated to 'require'
         _;                                           //executes check BEFORE func in this case
     }
@@ -40,33 +41,47 @@ contract Item {
     
     //Lease requires a payment to the Item/contract address, part goes to owner as rent while the rest remains in contract
     function lease() public payable nonOwnerFunc {   
-        require(available && msg.value >= value);       //Item must be available to be leased
-            leasee = msg.sender;                                //leasee will be set to sender of funds
-            address(owner).transfer(msg.value/4);               //Send owner 1/4 of value as rent - keep rest in contract address
+        require(available && msg.value == value);           //Item must be available to be leased
+            leasee = msg.sender;                            //leasee will be set to sender of funds
+            address(owner).transfer(msg.value/4);           //Send owner 1/4 of value as rent - keep rest in contract address
             available = false;
-            leased = block.timestamp;
+            leasedTime = block.timestamp;
     }
     
     //Only owner can verify the Item has been returned - remaining balance will be paid back to leasee
     function returnItem() public ownerFunc {
-        require(available == false && address(this).balance > 0);               //Can't return an non leased item
-        leasee.transfer(getBalance()); 
+        require(available == false);               //Can't return an non leased item
+        if (address(this).balance > 0) { leasee.transfer(getBalance()); }
         leasee = 0;                                         //Clear leasee address - no longer leasee
         available = true;
-        leased = 0;                                         //Reset leased timestamp
+        leasedTime = 0;                                         //Reset leased timestamp
     }
+    
+    //Allow owner to collect rent based on time passed since rented
+    /*function collectRent() public ownerFunc {
+         require(available == false); 
+         uint amount = 0;
+         if(timeSinceRentCollected > created) { 
+             amount = block.timestamp - timeSinceRentCollected / 86400;
+         }
+         else {
+             amount = block.timestamp - created / 86400;
+             
+         }
+         address(owner).transfer(amount);                                   
+    } */   
     
     //Only leasee can pay towards balance - can trigger claim of ownership
     function payOut() public leaseeFunc  {
         require(available == false);
-        address(owner).transfer(getBalance());                  //Send funds to owner from Item wallet
+        address(owner).transfer(getBalance());              //Send funds to owner from Item wallet
         //claimItem
     }
     
     //If balance has been paid out to owner, renter can claim ownership of Item
     function claimItem() public leaseeFunc {
         require(getBalance() == 0);
-        owner = leasee;            //Renter now becomes the owner
+        owner = leasee;                                     //Renter now becomes the owner
     }
 
 //Todo: transfer funds daily
@@ -88,8 +103,8 @@ contract Item {
     
     //Current timestamp minus leased timstamp
     function getLeasedTime() returns (uint) {
-        require(leased > 0 && available == false);                            
-        return block.timestamp - leased;
+        require(leasedTime > 0 && available == false);                            
+        return block.timestamp - leasedTime;
     }
     
     //Only owner can set desc Item
@@ -103,17 +118,12 @@ contract Item {
     
     //Only owner can set value for Item
     function setValue(uint value_) ownerFunc {
-        require(available);                         //Cannot change value while being rented 
+        require(available);                                 //Cannot change value while being rented 
         value = value_;
     }
     
     function getValue() returns (uint) {
         return value;
-    }
-    
-    //Only owner can set leseeAddress for Item
-    function setLeasee(address leaseeAddr_) ownerFunc {
-        leasee = leaseeAddr_;
     }
     
     //Get is public
@@ -140,6 +150,6 @@ contract Item {
     
     //Kill instance of contract or kill contract on blockchain?
     function kill() ownerFunc {
-        selfdestruct(owner);
+        selfdestruct(this);
     }
 }
