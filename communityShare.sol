@@ -150,6 +150,6 @@ contract Item {
     
     //Kill instance of contract or kill contract on blockchain?
     function kill() ownerFunc {
-        selfdestruct(this);
+        selfdestruct(owner);
     }
 }
