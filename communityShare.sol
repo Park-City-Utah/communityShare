@@ -9,7 +9,6 @@ contract Item {
     uint private leasedTime;       
     uint private value;
     bool private available;
-    uint private balance;
     //uint private timeSinceRentCollected;
     
     //Access modification - Func based on owner
@@ -36,7 +35,6 @@ contract Item {
         created = block.timestamp;
         value = value_;
         available = true;
-        balance = getBalance();
     }
     
     //Lease requires a payment to the Item/contract address, part goes to owner as rent while the rest remains in contract
@@ -51,7 +49,7 @@ contract Item {
     //Only owner can verify the Item has been returned - remaining balance will be paid back to leasee
     function returnItem() public ownerFunc {
         require(available == false);               //Can't return an non leased item
-        if (address(this).balance > 0) { leasee.transfer(getBalance()); }
+        if (address(this).balance > 0) { leasee.transfer(address(this).balance); }
         leasee = 0;                                         //Clear leasee address - no longer leasee
         available = true;
         leasedTime = 0;                                         //Reset leased timestamp
@@ -74,13 +72,13 @@ contract Item {
     //Only leasee can pay towards balance - can trigger claim of ownership
     function payOut() public leaseeFunc  {
         require(available == false);
-        address(owner).transfer(getBalance());              //Send funds to owner from Item wallet
+        address(owner).transfer(address(this).balance);              //Send funds to owner from Item wallet
         //claimItem
     }
     
     //If balance has been paid out to owner, renter can claim ownership of Item
     function claimItem() public leaseeFunc {
-        require(getBalance() == 0);
+        require(address(this).balance == 0);
         owner = leasee;                                     //Renter now becomes the owner
     }
 
@@ -142,11 +140,6 @@ contract Item {
     function getOwner() returns (address) {
         return owner;
     }
-    
-    //Get is public
-    function getBalance() returns (uint) {
-        return address(this).balance;
-    }   
     
     //Kill instance of contract or kill contract on blockchain?
     function kill() ownerFunc {
