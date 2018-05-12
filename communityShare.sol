@@ -1,15 +1,11 @@
 pragma solidity ^0.4.0;
 
-contract Item {
-    address private owner;
-    address private leasee;
-    string private name;
-    string private desc;
-    uint private createdDateTime;
-    uint private leasedDateTime;       
-    uint private value;
-    bool private isAvailable;
-    //uint private timeSinceRentCollected;
+contract Owned {
+    address owner;
+    
+    constructor () public {
+        owner == msg.sender;
+    }
     
     //Access modification - Func based on owner
     modifier ownerFunc {
@@ -21,15 +17,26 @@ contract Item {
         require(owner != msg.sender);                //Better than throw - deprecated to 'require'
         _;                                           //executes check BEFORE func in this case
     }
+      
+}
+
+contract Item is Owned {
+    string private name;
+    string private desc;
+    uint private createdDateTime;
+    uint private leasedDateTime;       
+    uint private value;
+    bool private isAvailable;
+    address private leasee;
+    //uint private timeSinceRentCollected;
     
     modifier leaseeFunc {
         require(leasee == msg.sender);              //Better than throw - deprecated to 'require'
         _;                                          //executes check BEFORE func in this case
-    }
+    }    
     
     //Constructor
     constructor (string name_, string desc_, uint value_) public {
-        owner = msg.sender;
         name = name_;
         desc = desc_;
         createdDateTime = block.timestamp;
@@ -41,7 +48,7 @@ contract Item {
     function lease() public payable nonOwnerFunc {   
         require(isAvailable && msg.value == value);           //Item must be available to be leased
             leasee = msg.sender;                            //leasee will be set to sender of funds
-            address(owner).transfer(msg.value/4);           //Send owner 1/4 of value as rent - keep rest in contract address
+            owner.transfer(msg.value/4);           //Send owner 1/4 of value as rent - keep rest in contract address
             isAvailable = false;
             leasedDateTime = block.timestamp;
     }
@@ -90,59 +97,59 @@ contract Item {
         name = newName;
     }
     
-    function getName() returns (string) {
+    function getName() view public returns (string) {
         return name;
     }
     
     //Current timestamp minus created timestamp
-    function getAge() returns (uint) {
+    function getAge() view public returns (uint) {
         return block.timestamp - createdDateTime;
     }
     
     //Current timestamp minus leased timstamp
-    function getLeasedTime() returns (uint) {
+    function getLeasedTime() view public returns (uint) {
         require(leasedDateTime > 0 && isAvailable == false);                            
         return block.timestamp - leasedDateTime;
     }
     
     //Only owner can set desc Item
-    function setDesc(string desc_) ownerFunc {
+    function setDesc(string desc_) public ownerFunc {
         desc = desc_;
     }
     
-    function getDesc() returns (string) {
+    function getDesc() view public returns (string) {
         return desc;
     }
     
     //Only owner can set value for Item
-    function setValue(uint value_) ownerFunc {
+    function setValue(uint value_) public ownerFunc {
         require(isAvailable);                                 //Cannot change value while being rented 
         value = value_;
     }
     
-    function getValue() returns (uint) {
+    function getValue() view public returns (uint) {
         return value;
     }
     
     //Get is public
-    function getLeasee() returns (address) {
+    function getLeasee() view public returns (address) {
         return leasee;
     }  
     
     //Set availablity can only be done by return of item or change in ownership
     
     //Get is public
-    function getAvailability() returns (bool) {
+    function getAvailability() view public returns (bool) {
         return isAvailable;
     }
     
     //Get is public
-    function getOwner() returns (address) {
+    function getOwner() view public returns (address) {
         return owner;
     }
     
     //Kill instance of contract or kill contract on blockchain?
-    function kill() ownerFunc {
+    function kill() public ownerFunc {
         selfdestruct(owner);
     }
 }
