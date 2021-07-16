@@ -1,4 +1,4 @@
-# communityShare
+# Solidity Smart Contract - CommunityShare designed to allow for 'rent' of household items and tools. Failure to return transfers ownership.
 
 Program allows for the creation of a community share item for rent/lease. Rent is paid to the Item contract at 
 which time the owner gets a fraction for rent, the rest is stored in the Item contract and later returned
